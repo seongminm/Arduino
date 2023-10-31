@@ -1,0 +1,101 @@
+/*
+  SD card read/write
+
+  This example shows how to read and write data to and from an SD card file
+  The circuit:
+   SD card attached to SPI bus as follows:
+ ** MOSI - pin 11
+ ** MISO - pin 12
+ ** CLK - pin 13
+ ** CS - pin 4 (for MKRZero SD: SDCARD_SS_PIN)
+
+  created   Nov 2010
+  by David A. Mellis
+  modified 9 Apr 2012
+  by Tom Igoe
+
+  This example code is in the public domain.
+
+*/
+
+#include <SPI.h>
+#include <SD.h>
+#include <DHT.h>
+
+File myFile;
+
+// DHT22 센서 초기화
+#define DHTPIN 5			// DHT센서값을 받을 디지털핀
+#define DHTTYPE DHT22		// 사용할 센서타입을 DHT22 로 지정
+DHT dht(DHTPIN, DHTTYPE);	// 센서 객체 생성
+
+float h, t;
+float L, M, S, P;
+
+void setup() {
+  pinMode(3, OUTPUT);
+
+  dht.begin();
+  // Open serial communications and wait for port to open:
+  Serial.begin(9600);
+
+  Serial.print("Initializing SD card...");
+
+  if (!SD.begin(4)) {
+    Serial.println("initialization failed!");
+    while (1);
+  }
+  Serial.println("initialization done.");
+
+  // open the file. note that only one file can be open at a time,
+  // so you have to close this one before opening another.
+  myFile = SD.open("test.txt", FILE_WRITE);
+
+}
+  
+void loop() {
+ 
+  if (myFile) {
+    digitalWrite(3, HIGH);  // turn the LED on (HIGH is the voltage level)
+    static uint32_t started = 0;	// 타이머용 변수 선언 및 초기화
+    if (millis() - started >= 2000)	// 2초간격으로 측정
+	  {
+		started = millis();			// 타이머기준 리셋
+		h = dht.readHumidity();     // 습도값 요청
+    t = dht.readTemperature();  // 온도값 요청		
+    L = (analogRead(A0) * 5) / 1024.0;
+    M = (analogRead(A1) * 5) / 1024.0;
+    S = (analogRead(A2) * 5) / 1024.0;
+    P = (analogRead(A3) * 5) / 1024.0;
+
+    myFile.print(millis()/1000);
+    myFile.print("/ Humidity: ");
+    myFile.print(h);
+    myFile.print(" / Temperature: ");
+    myFile.print(t);
+    myFile.print("/ L: ");
+    myFile.print(L);
+    myFile.print("/ M: ");
+    myFile.print(M);
+    myFile.print("/ S: ");
+    myFile.print(S);
+    myFile.print("/ P: ");
+    myFile.println(P);
+	  }
+  }
+  else {
+    // if the file didn't open, print an error:
+    Serial.println("error opening test.txt");
+    digitalWrite(3, LOW);  // turn the LED on (HIGH is the voltage level)
+  }
+  
+  if(millis() >= 4200000) {
+    myFile.close();
+    Serial.println("done.");
+    digitalWrite(3, LOW);  // turn the LED on (HIGH is the voltage level)
+    delay(2000); 
+  }
+  
+}
+
+
